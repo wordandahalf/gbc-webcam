@@ -1,0 +1,1 @@
+This directory contains code for experimenting with and evaluating the performance of the M64282FP. I used the Kingst LA1010 logic analyzer during prototyping to ensure adherence to the chip's specifications. The configuration of my KingstVIS environment is in `config.kvset`. 
