@@ -5,22 +5,24 @@ const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const pio = rp2xxx.pio;
 
+const M64282fp = @import("m64282fp.zig").M64282fp;
+
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{ .PIO0_IRQ_0 = .{ .c = pio_ready_for_data } }
 };
 
 const pio0 = pio.num(0);
 const sm = pio.StateMachine.sm0;
+var device = M64282fp.init();
 
 fn pio_ready_for_data() callconv(.c) void {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 
-    // write exposure
-    pio0.sm_blocking_write(sm, 32 - 2);
-
-    // write read length
-    pio0.sm_blocking_write(sm, 128 - 2);
+    // todo: Properly calculate the number of us per cycle. For now (with divider 15.625),
+    // todo: each cycle corresponds to 2 us.
+    pio0.sm_blocking_write(sm, (@as(u32, device.regs().exposure()) << 3) - 2);
+    pio0.sm_blocking_write(sm, (128 * 128) - 2);
 
     pio0.sm_clear_interrupt(sm, .irq0, .statemachine);
 }
@@ -40,18 +42,9 @@ pub fn main() !void {
     const options: pio.LoadAndStartProgramOptions = .{
         .clkdiv = pio.ClkDivOptions.from_float(15.625),
         .pin_mappings = .{
-            .set = .{
-                .base = 0,
-                .count = 4,
-            },
-            .out = .{
-                .base = 4,
-                .count = 1,
-            },
-            .side_set = .{
-                .base = 5,
-                .count = 1
-            },
+            .set = .{ .base = 0, .count = 4, },
+            .out = .{ .base = 4, .count = 1, },
+            .side_set = .{ .base = 5, .count = 1 },
         },
         .shift = .{
             .out_shiftdir = .left,
@@ -65,17 +58,11 @@ pub fn main() !void {
     pio0.sm_load_and_start_program(sm, program_sin, options) catch unreachable;
 
     // For my sanity, we waste 21 bits per FIFO word when encoding register values.
-     // This is not ideal, but meticulously constructing the three FIFO words with the
-     // 8 packed 11-bit address-value pairs is a pain in the ass since it is isn't byte-aligned.
-     // Instead, we just use 11 bits per word and then discard the rest.
-    for (0..8) |it| {
-        var word = @as(u11, @truncate(it)) << 8;
-        if (it & 1 == 1) {
-            word |= 0b01010101;
-        } else {
-            word |= 0b10101010;
-        }
-        pio0.sm_blocking_write(sm, @as(u32, word) << 21);
+    // This is not ideal, but meticulously constructing the three FIFO words with the
+    // 8 packed 11-bit address-value pairs is a pain in the ass since it is isn't byte-aligned.
+    // Instead, we just use 11 bits per word and then discard the rest.
+    for (0..8, device.registers.values) |i, it| {
+        pio0.sm_blocking_write(sm, @as(u32, @as(u11, @truncate(i)) << 8 | it) << 21);
     }
 
     pio0.sm_set_enabled(sm, true);
