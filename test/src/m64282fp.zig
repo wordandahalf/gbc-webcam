@@ -1,18 +1,7 @@
-pub const EdgeProcessType = enum(u1) {
-    enhancement = 0, extraction
-};
-
-pub const EdgeProcessDirection = enum(u2) {
-    none = 0, horizontal, vertical, both
-};
-
-pub const EdgeProcessRatio = enum(u3) {
-    @"50%" = 0, @"75%", @"100%", @"125%", @"200%", @"300%", @"400%", @"500%"
-};
-
-pub const ZeroCalibrationType = enum(u2) {
-    none = 0, negative, positive, _
-};
+pub const EdgeProcessType = enum(u1) { enhancement = 0, extraction };
+pub const EdgeProcessDirection = enum(u2) { none = 0, horizontal, vertical, both };
+pub const EdgeProcessRatio = enum(u3) { @"50%" = 0, @"75%", @"100%", @"125%", @"200%", @"300%", @"400%", @"500%" };
+pub const ZeroCalibrationType = enum(u2) { none = 0, negative, positive, _ };
 
 pub const NamedRegisters = packed struct(u64) {
     output_reference: u6,                   // A sign-magnitude encoded value for adjusting the offset of the read pixel data in 32 mV steps.
@@ -42,7 +31,17 @@ pub const NamedRegisters = packed struct(u64) {
     }
 };
 
-pub const Registers = union {
+const Defaults: NamedRegisters = .{
+    .output_reference = 0, .zero_point = .positive,
+    .output_gain = 8, .edge_operation = .none,
+    .override_kernel = 0, .exposure_time_high = 125,
+    .exposure_time_low = 0, .pixel_coefficient = 1,
+    .neighbor_coefficient = 0, .unknown_coefficient = 1,
+    .output_bias = 0, .invert_output = 0, .edge_process_ratio = .@"50%",
+    .edge_process = .enhancement
+};
+
+pub const Registers = extern union {
     values: [8]u8, named: NamedRegisters,
 };
 
@@ -50,7 +49,7 @@ pub const M64282fp = struct {
     registers: Registers,
 
     pub fn init() M64282fp {
-        return .{ .registers = .{ .values = undefined } };
+        return .{ .registers = .{ .named = Defaults } };
     }
 
     /// Convenience function for `self.registers.named`.
