@@ -20,8 +20,7 @@ fn pio_ready_for_data() callconv(.c) void {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 
-    const exposure_cycles = @as(u32, device.regs().exposure()) * config.m64282fp_pio_clock_periods_per_exposure;
-    pio0.sm_blocking_write(sm,  exposure_cycles);
+    pio0.sm_blocking_write(sm,  @as(u32, device.regs().exposure()) * config.m64282fp_clock_periods_per_exposure - 2);
     pio0.sm_blocking_write(sm, m64282fp.sensor_resolution - 2);
 
     pio0.sm_clear_interrupt(sm, .irq0, .statemachine);
