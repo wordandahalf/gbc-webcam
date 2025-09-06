@@ -11,6 +11,7 @@
 ; | ----------------------------- |     | ---------------- |     | --------------- |
 
 .program m64282fp
+.define PUBLIC xck_multiplier 16
 .side_set 1
     set pins, 0b1000                side 1  [7] ; Initialize state of pins.
     set x, 7                        side 0  [7] ; The sensor has 8 registers we need to configure.

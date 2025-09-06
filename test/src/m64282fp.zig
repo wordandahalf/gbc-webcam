@@ -1,3 +1,6 @@
+pub const exposure_time_increment_us = 16;
+pub const sensor_resolution = 128 * 128;
+
 pub const EdgeProcessType = enum(u1) { enhancement = 0, extraction };
 pub const EdgeProcessDirection = enum(u2) { none = 0, horizontal, vertical, both };
 pub const EdgeProcessRatio = enum(u3) { @"50%" = 0, @"75%", @"100%", @"125%", @"200%", @"300%", @"400%", @"500%" };
@@ -12,8 +15,8 @@ pub const NamedRegisters = packed struct(u64) {
     edge_operation: EdgeProcessDirection,   // Configures which edge directions have edge_process applied.
     override_kernel: u1,                    // See 11.6.1. Overrides kernel values specifically for vertical edge processing.
 
-    exposure_time_high: u8,                 // High byte, configuring the exposure time in 4.096 ms increments.
-    exposure_time_low: u8,                  // Low byte, configuring the exposure time in 16 us increments.
+    exposure_time_high: u8,                 // High byte for configuring the exposure time in 4.096 ms increments.
+    exposure_time_low: u8,                  // Low byte for configuring the exposure time in 16 us increments.
 
     pixel_coefficient: u8,                  // Multiplier applied to pixel value for filtering kernel.
     neighbor_coefficient: u8,               // Multipler applied to 4-neighbors for filtering kernel.
@@ -45,15 +48,14 @@ pub const Registers = extern union {
     values: [8]u8, named: NamedRegisters,
 };
 
-pub const M64282fp = struct {
-    registers: Registers,
+const Self = @This();
+registers: Registers,
 
-    pub fn init() M64282fp {
-        return .{ .registers = .{ .named = Defaults } };
-    }
+pub fn init() Self {
+    return .{ .registers = .{ .named = Defaults } };
+}
 
-    /// Convenience function for `self.registers.named`.
-    pub fn regs(self: M64282fp) callconv(.@"inline") NamedRegisters {
-        return self.registers.named;
-    }
-};
+/// Convenience function for `self.registers.named`.
+pub fn regs(self: Self) callconv(.@"inline") NamedRegisters {
+    return self.registers.named;
+}
