@@ -20,7 +20,7 @@
     nop                             side 0  [2] ; Pad cycle.
 configure_register:
     set y, 10                       side 0  [0] ; Each register is configured as a 3-bit address followed by its 8-bit value.
-    set pins, 0b0000                side 0  [0] ; Clear load from previous iteration of write_bits, ensuring hold time meets spec
+    set pins, 0b1000                side 0  [0] ; Clear load from previous iteration of write_bits, ensuring hold time meets spec
                                                 ; of at least 0.4 us.
     jmp write_bits                  side 0  [0]
 loop_write_bits:
@@ -28,7 +28,7 @@ loop_write_bits:
 write_bits:
     out pins, 1                     side 0  [1] ; Shift bit from TX FIFO into Serial In
     jmp y--, loop_write_bits        side 1  [7] ; Continue shifting the remaining data.
-    set pins, 0b0100                side 0  [0] ; Pull load HIGH on falling edge to signal to sensor
+    set pins, 0b1100                side 0  [0] ; Pull load HIGH on falling edge to signal to sensor
                                                 ; TODO: the current hold time for load (tHL) breaks spec.
     out pins, 21                    side 0  [0] ; Trash the remaining 21 bits in FIFO
     jmp x--, configure_register     side 0  [0] ; that the full data has been sent. Continue to configure the next
@@ -36,7 +36,7 @@ write_bits:
 done_configure_register:
     nop                             side 0  [0] ; Ensure 1-cycle delay before pulling load LOW, making hold time same as other
                                                 ; iterations.
-    set pins, 0b0000                side 0  [4] ; Pull load LOW as on line 17.
+    set pins, 0b1000                side 0  [4] ; Pull load LOW as on line 17.
     nop                             side 1  [0] ; Pad cycle.
 configure_exposure:
 .wrap_target
@@ -44,7 +44,7 @@ configure_exposure:
     pull                            side 1  [0] ; Pull number of cycles (plus one) to wait from FIFO.
     out x, 32                       side 1  [0] ; Move exposure cycles from OSR to scratch register for decrementing.
     nop                             side 0  [7] ; Pull start HIGH for one cycle.
-    set pins, 0b0010                side 1  [7] ; Rising edge
+    set pins, 0b1010                side 1  [7] ; Rising edge
 loop_wait_exposure:
     set pins, 0b0000                side 0  [7] ; Clear start on first iteration, otherwise use as nop.
     jmp x--, loop_wait_exposure     side 1  [7] ; Rising edge, continue looping.
@@ -52,7 +52,8 @@ done_wait_exposure:
     pull                            side 0  [6] ; Pull number of pixels to read from FIFO
     out x, 32                       side 0  [0] ; Move from OSR to scratch register
 read_frame:
-    set pins, 0b0001                side 1  [7] ; Pull read HIGH while ADC is reading.
-    jmp x--, read_frame             side 0  [7] ; Loop until done
+    set pins, 0b1001                side 1  [7] ; Pull read HIGH while ADC is reading.
+    jmp x--, read_frame             side 0  [6] ; Loop until done
+    irq 1                           side 0  [0] ; For now, tell CPU to pull a pixel sample via IRQ1
     nop                             side 1  [0] ; Begin rising edge, padding cycle to correct length
 .wrap                                           ; Wrap back to exposure loop
