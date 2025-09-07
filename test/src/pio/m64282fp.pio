@@ -29,7 +29,6 @@ write_bits:
     out pins, 1                     side 0  [1] ; Shift bit from TX FIFO into Serial In
     jmp y--, loop_write_bits        side 1  [7] ; Continue shifting the remaining data.
     set pins, 0b1100                side 0  [0] ; Pull load HIGH on falling edge to signal to sensor
-                                                ; TODO: the current hold time for load (tHL) breaks spec.
     out pins, 21                    side 0  [0] ; Trash the remaining 21 bits in FIFO
     jmp x--, configure_register     side 0  [0] ; that the full data has been sent. Continue to configure the next
                                                 ; register, or fall through if done.
@@ -46,14 +45,14 @@ configure_exposure:
     nop                             side 0  [7] ; Pull start HIGH for one cycle.
     set pins, 0b1010                side 1  [7] ; Rising edge
 loop_wait_exposure:
-    set pins, 0b0000                side 0  [7] ; Clear start on first iteration, otherwise use as nop.
+    set pins, 0b1000                side 0  [7] ; Clear start on first iteration, otherwise use as nop.
     jmp x--, loop_wait_exposure     side 1  [7] ; Rising edge, continue looping.
 done_wait_exposure:
     pull                            side 0  [6] ; Pull number of pixels to read from FIFO
     out x, 32                       side 0  [0] ; Move from OSR to scratch register
 read_frame:
-    set pins, 0b1001                side 1  [7] ; Pull read HIGH while ADC is reading.
-    jmp x--, read_frame             side 0  [6] ; Loop until done
-    irq 1                           side 0  [0] ; For now, tell CPU to pull a pixel sample via IRQ1
+    irq 1                           side 1  [0] ; For now, signal to CPU to sample Vout.
+    set pins, 0b1001                side 1  [6] ; Pull read HIGH while ADC is reading.
+    jmp x--, read_frame             side 0  [7] ; Loop until done
     nop                             side 1  [0] ; Begin rising edge, padding cycle to correct length
 .wrap                                           ; Wrap back to exposure loop
