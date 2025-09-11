@@ -1,63 +1,85 @@
+const std = @import("std");
 const microzig = @import("microzig");
+const chip = microzig.chip;
 const rp2xxx = microzig.hal;
+const adc = rp2xxx.adc;
 const gpio = rp2xxx.gpio;
 const time = rp2xxx.time;
 const pio = rp2xxx.pio;
+const dma = rp2xxx.dma;
+const multicore = rp2xxx.multicore;
 
 const config = @import("config.zig");
 const m64282fp = @import("m64282fp.zig");
 const program = @import("pio/m64282fp.zig").program;
-const packRegisters = @import("utils.zig").packRegisters;
+const serial = @import("usb/serial_cdc.zig");
+const utils = @import("utils.zig");
+const packRegisters = utils.packRegisters;
+
+const led = gpio.num(25);
 
 pub const microzig_options: microzig.Options = .{
     .interrupts = .{
-        .PIO0_IRQ_0 = .{ .c = pio_ready_for_data },
-        .PIO0_IRQ_1 = .{ .c = adc_sample_pixel },
-    }
+        .IO_IRQ_BANK0 = .{ .c = adc_begin_sampling }
+    },
+    .log_level = .debug,
+    .logFn = rp2xxx.uart.log,
 };
+
+const read_pin = gpio.num(0);
 
 const pio0 = pio.num(0);
 const sm = pio.StateMachine.sm0;
 var device = m64282fp.init();
 
-var pixel_buffer: [m64282fp.sensor_resolution]u12 = undefined;
-var pixel_buffer_ptr: u32 = 0;
+const pixel_data_channel = dma.channel(0);
+var pixel_buffer: [m64282fp.sensor_resolution]u8 = undefined;
 
-fn pio_ready_for_data() callconv(.c) void {
+var read_data = false;
+fn adc_begin_sampling() callconv(.c) void {
     const cs = microzig.interrupt.enter_critical_section();
     defer cs.leave();
 
-    pixel_buffer_ptr = 0;
-    pio0.sm_blocking_write(sm, m64282fp.sensor_resolution);
-    pio0.sm_blocking_write(sm,  @as(u32, device.regs().exposure()) * config.m64282fp_clock_periods_per_exposure);
+    chip.peripherals.IO_BANK0.INTR0.modify(.{
+        .GPIO0_EDGE_HIGH = 1
+    });
 
-    pio0.sm_clear_interrupt(sm, .irq0, .statemachine);
+    read_data = true;
+    pixel_data_channel.setup_transfer_raw(
+        @intFromPtr(pixel_buffer[0..]),
+        @intFromPtr(&microzig.chip.peripherals.ADC.FIFO),
+        m64282fp.sensor_resolution,
+        .{
+            .data_size = .size_8,
+            .dreq = .adc,
+            .enable = true,
+            .write_increment = true,
+            .read_increment = false,
+            .trigger = true
+        }
+    );
+    rp2xxx.adc.start(.free_running);
+
+    led.toggle();
 }
 
-fn adc_sample_pixel() callconv(.c) void {
-    const cs = microzig.interrupt.enter_critical_section();
-    defer cs.leave();
+fn configure_pio() void {
+    read_pin.set_direction(.in);
+    read_pin.set_pull(.up);
+    chip.peripherals.PPB.NVIC_ISER.modify(.{ .SETENA = 1 << 0 });
+    chip.peripherals.IO_BANK0.PROC0_INTE0.modify(.{ .GPIO0_EDGE_HIGH = 1 });
+    microzig.cpu.interrupt.enable(.IO_IRQ_BANK0);
 
-    pixel_buffer[pixel_buffer_ptr] = rp2xxx.adc.convert_one_shot_blocking(.ain0) catch blk: {
-        break :blk 0;
-    };
-    pixel_buffer_ptr += 1;
-
-    pio0.sm_clear_interrupt(sm, .irq1, .statemachine);
-}
-
-pub fn main() !void {
-    microzig.cpu.interrupt.enable(.PIO0_IRQ_0);
-    microzig.cpu.interrupt.enable(.PIO0_IRQ_1);
-
-    for (0..6) |it| { pio0.gpio_init(gpio.num(@truncate(0 + it))); }
-    pio0.sm_set_pindir(sm, 0, 6, .out);
-    pio0.sm_set_pin(sm, 0, 6, 0);
+    // initialize pins used in PIO, see m64282fp
+    // todo: parameterize this so we can use other sensors in the same family
+    for (1..6) |it| { pio0.gpio_init(gpio.num(@truncate(it))); }
+    pio0.sm_set_pindir(sm, 1, 5, .out);
+    pio0.sm_set_pin(sm, 1, 5, 0);
 
     const options: pio.LoadAndStartProgramOptions = .{
         .clkdiv = pio.ClkDivOptions.from_float(config.m64282fp_pio_clock_divider),
         .pin_mappings = .{
-            .set = .{ .base = 0, .count = 2 },
+            .set = .{ .base = 1, .count = 1 },
             .side_set = .{ .base = 2, .count = 3 },
             .out = .{ .base = 5, .count = 1 }
         },
@@ -69,16 +91,68 @@ pub fn main() !void {
         },
     };
 
-    pio0.sm_enable_interrupt(sm, .irq0, .statemachine);
     pio0.sm_load_and_start_program(sm, program, options) catch unreachable;
+
+    read_pin.set_input_enabled(true);
+}
+
+fn configure_adc() void {
+    adc.configure_gpio_pin_num(.ain0);
+    adc.select_input(.ain0);
+    adc.apply(.{
+        .sample_frequency = config.xck,
+        .temp_sensor_enabled = false,
+        .round_robin = null,
+        .fifo = .{
+            .dreq_enabled = true,
+            .thresh = 1,
+            .shift = true
+        }
+    });
+
+    pixel_data_channel.setup_transfer_raw(
+        @intFromPtr(pixel_buffer[0..]),
+        @intFromPtr(&microzig.chip.peripherals.ADC.FIFO),
+        m64282fp.sensor_resolution,
+        .{
+            .data_size = .size_8,
+            .dreq = .adc,
+            .enable = true,
+            .write_increment = true,
+            .read_increment = false,
+            .trigger = true
+        }
+    );
+}
+
+pub fn main() !void {
+    @memset(&pixel_buffer, 0);
+
+    // The on-board LED to used for showing how often a frame is captured.
+    led.set_function(.sio);
+    led.set_direction(.out);
+    led.put(1);
+
+    serial.init();
+
+    configure_adc();
+    configure_pio();
 
     var buffer: [3]u32 = undefined;
     packRegisters(device.registers.values, buffer[0..]);
-
     for (buffer) |it| {
-        pio0.sm_blocking_write(sm, it);
+        pio0.sm_write(sm, it);
     }
 
     pio0.sm_set_enabled(sm, true);
-    while (true) {}
+
+    while (true) {
+        serial.task(false);
+
+        if (read_data) {
+            read_data = false;
+
+            // todo: investigate USB CDC serial behavior, dump data
+        }
+    }
 }

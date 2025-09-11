@@ -1,4 +1,3 @@
-pub const exposure_time_increment_us = 16;
 pub const sensor_resolution = 128 * 128;
 
 pub const EdgeProcessType = enum(u1) { enhancement = 0, extraction };
@@ -15,8 +14,8 @@ pub const NamedRegisters = packed struct(u64) {
     edge_operation: EdgeProcessDirection,   // Configures which edge directions have edge_process applied.
     override_kernel: u1,                    // See 11.6.1. Overrides kernel values specifically for vertical edge processing.
 
-    exposure_time_high: u8,                 // High byte for configuring the exposure time in 4.096 ms increments.
-    exposure_time_low: u8,                  // Low byte for configuring the exposure time in 16 us increments.
+    exposure_time_high: u8,                 // From my research, it appears the chip has an 8x clock divider.
+                                            // This 16-bit value configures the number of divided clock pulses per exposure.
 
     pixel_coefficient: u8,                  // Multiplier applied to pixel value for filtering kernel.
     neighbor_coefficient: u8,               // Multipler applied to 4-neighbors for filtering kernel.
@@ -35,9 +34,9 @@ pub const NamedRegisters = packed struct(u64) {
 };
 
 const Defaults: NamedRegisters = .{
-    .output_reference = 0, .zero_point = .positive,
+    .output_reference = 0x3F, .zero_point = .none,
     .output_gain = 8, .edge_operation = .none,
-    .override_kernel = 0, .exposure_time_high = 125,
+    .override_kernel = 0, .exposure_time_high = 1,
     .exposure_time_low = 0, .pixel_coefficient = 1,
     .neighbor_coefficient = 0, .unknown_coefficient = 1,
     .output_bias = 0, .invert_output = 0, .edge_process_ratio = .@"50%",

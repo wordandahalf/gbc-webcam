@@ -4,46 +4,31 @@
 ;                                  CLOCK CONFIGURATION
 ; The PIO must be running at xck_multiplier times the desired Xck frequency.
 ;                                   PIN CONFIGURATION
-; | - SET GPIOs - |     | --- OUT GPIO --- |     | ------ SIDE GPIO ----- |
-; | Pin 2 | Pin 1 |     |     Pin 1        |     | Pin 3 | Pin 2  | Pin 1 |
-; | Start | Read  |     |    Serial In     |     | Clock | Reset  | Load  |
-; | ------------- |     | ---------------- |     | ---------------------- |
+; | SET GPIOs  |     | --- OUT GPIO --- |     | ------ SIDE GPIO ----- |
+; |    Pin 1   |     |     Pin 1        |     | Pin 3 | Pin 2  | Pin 1 |
+; |    Start   |     |    Serial In     |     | Clock | Reset  | Load  |
+; | ---------- |     | ---------------- |     | ---------------------- |
 
 .program m64282fp
-.define PUBLIC xck_multiplier 8
+.define PUBLIC xck_multiplier 2
 .side_set 3
 
-set pins, 0b00              side 0b010 [0]
-
 start:
-    irq 0                   side 0b010 [3]
-    set x,    7             side 0b110 [3]
-    out pins, 1             side 0b000 [3]
-    set y,    9             side 0b100 [3]
-write_bits:
-    out pins, 1             side 0b010 [3]
-    jmp y--, write_bits     side 0b110 [3]
-    out pins, 1             side 0b010 [3]
-    set y,    9             side 0b111 [3]
-    out pins, 1             side 0b011 [3]
-    jmp x--, write_bits     side 0b110 [3]
-configure_exposure:
-    out x, 8                side 0b010 [0] ; drain the remaining data from FIFO
-.wrap_target
-    set pins, 0b10          side 0b010 [0]
-    irq 0                   side 0b010 [0]
-    pull                    side 0b010 [0]
-    out x, 32               side 0b110 [3]
-wait_exposure:
-    set pins, 0b00          side 0b010 [3]
-    jmp x--, wait_exposure  side 0b110 [3]
-done_wait_exposure:
-    pull                    side 0b010 [2]
-    out x, 32               side 0b010 [0]
-    nop                     side 0b110 [3]
-read_frame:
-    irq 1                   side 0b010 [2]
-    set pins, 0b01          side 0b010 [0]
-    jmp x--, read_frame     side 0b110 [3]
     nop                     side 0b010 [0]
+    set x,    7             side 0b110 [0]
+    nop                     side 0b000 [0]
+    set y,    9             side 0b100 [0] ; configure the number of registers and bits per register
+write_bits:
+    out pins, 1             side 0b010 [0] ; shift out the first 10 bits
+    jmp y--, write_bits     side 0b110 [0]
+    out pins, 1             side 0b010 [0] ; shift out the last pit of the previous register, pulling load high on
+    set y,    8             side 0b111 [0] ; rising edge.
+    out pins, 1             side 0b011 [0] ; keep load high until next rising edge
+    jmp x--, write_bits     side 0b110 [0]
+configure_exposure:
+    set pins, 0b1           side 0b010 [0]
+    nop                     side 0b110 [0]
+.wrap_target
+    set pins, 0b0           side 0b010 [0]
+    nop                     side 0b110 [0]
 .wrap
