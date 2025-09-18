@@ -4,6 +4,7 @@
 #include "hardware/adc.h"
 #include "hardware/dma.h"
 #include "pico/multicore.h"
+#include "pico/time.h"
 #include "hardware/pio.h"
 #include "m64282fp.h"
 #include "pio/m64282fp.pio.h"
@@ -13,14 +14,14 @@
 PIO pio; uint sm; uint offset; pio_sm_config sm_config;
 uint chan; dma_channel_config dma_config;
 
-char pixel_buffer[SENSOR_RESOLUTION];
+char pixel_buffer[SENSOR_RESOLUTION + 256];
 
 volatile int i = 0;
 static void adc_prime_dma();
 static void adc_begin_sampling(uint gpio, uint32_t events) {
+    multicore_fifo_push_blocking(1);
     adc_prime_dma(); adc_run(true);
     gpio_put(PICO_DEFAULT_LED_PIN, !gpio_get_out_level(PICO_DEFAULT_LED_PIN));
-    multicore_fifo_push_blocking(1);
 }
 
 static void configure_pio() {
@@ -46,14 +47,14 @@ static void configure_pio() {
 }
 
 static void adc_prime_dma() {
-    dma_channel_configure(chan, &dma_config, &pixel_buffer, &adc_hw->fifo, SENSOR_RESOLUTION, true);
+    dma_channel_configure(chan, &dma_config, &pixel_buffer, &adc_hw->fifo, sizeof(pixel_buffer), true);
 }
 
 static void configure_adc() {
     adc_init();
     adc_gpio_init(26);
     adc_select_input(0);
-    adc_set_clkdiv(48000000.0f / XCLK);
+    adc_set_clkdiv(48000000.0f / XCLK - 1);
     adc_set_temp_sensor_enabled(false);
     adc_set_round_robin(0);
     adc_fifo_setup(true, true, 1, false, true);
@@ -72,9 +73,11 @@ static void configure_adc() {
 
 void frame_transfer_watchdog() {
     while (true) {
-        if (multicore_fifo_rvalid) {
+        if (multicore_fifo_rvalid()) {
             multicore_fifo_drain();
-            stdio_put_string(pixel_buffer, SENSOR_RESOLUTION, false, false);
+            pixel_buffer[SENSOR_RESOLUTION + 254] = 0xAA;
+            pixel_buffer[SENSOR_RESOLUTION + 255] = 0x55;
+            stdio_put_string(pixel_buffer, sizeof(pixel_buffer), false, false);
         }
     }
 }
