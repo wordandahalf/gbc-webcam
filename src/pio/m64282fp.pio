@@ -21,7 +21,7 @@ start:
 write_bits:
     out pins, 1             side 0b010 [0] ; shift out the first 10 bits
     jmp y--, write_bits     side 0b110 [0]
-    out pins, 1             side 0b010 [0] ; shift out the last pit of the previous register, pulling load high on
+    out pins, 1             side 0b010 [0] ; shift out the last bit of the previous register, pulling load high on
     set y,    8             side 0b111 [0] ; rising edge.
     out pins, 1             side 0b011 [0] ; keep load high until next rising edge
     jmp x--, write_bits     side 0b110 [0]
