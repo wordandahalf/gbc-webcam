@@ -5,8 +5,7 @@ set(MX_Defines_Syms
 	CORE_CM4 
 	USE_HAL_DRIVER 
 	STM32H755xx 
-	USE_PWR_DIRECT_SMPS_SUPPLY 
-	USE_NUCLEO_144
+	USE_PWR_DIRECT_SMPS_SUPPLY
     $<$<CONFIG:Debug>:DEBUG>
 )
 # STM32CubeMX generated include paths
@@ -53,8 +52,6 @@ set(STM32_Drivers_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_usart_ex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_adc_ex.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../Drivers/BSP/STM32H7xx_Nucleo/stm32h7xx_nucleo.c
 )
 
@@ -68,6 +65,7 @@ set(MX_LINK_DIRS
 set (MX_LINK_LIBS 
     STM32_Drivers
     ${TOOLCHAIN_LINK_LIBRARIES}
+    
     
 )
 # Interface library for includes and symbols
@@ -92,6 +90,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME} ${MX_LINK_LIBS})
 
 # Add the map file to the list of files to be removed with 'clean' target
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)
+
+
 
 
 # Validate that STM32CubeMX code is compatible with C standard

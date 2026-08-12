@@ -64,7 +64,6 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
@@ -115,9 +114,6 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* Configure the peripherals common clocks */
-  PeriphCommonClock_Config();
 /* USER CODE BEGIN Boot_Mode_Sequence_2 */
 #if defined(DUAL_CORE_BOOT_SYNC_SEQUENCE)
 /* When system initialization is finished, Cortex-M7 will release Cortex-M4 by means of
@@ -191,7 +187,7 @@ Error_Handler();
       /* -- Sample board code to toggle leds ---- */
       BSP_LED_Toggle(LED_GREEN);
       BSP_LED_Toggle(LED_YELLOW);
-      BSP_LED_Toggle(LED_RED);
+      // BSP_LED_Toggle(LED_RED);
       /* ..... Perform your action ..... */
     }
     /* USER CODE END WHILE */
@@ -219,10 +215,6 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
-
-  /** Macro to configure the PLL clock source
-  */
-  __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSI);
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -257,32 +249,6 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief Peripherals Common Clock Configuration
-  * @retval None
-  */
-void PeriphCommonClock_Config(void)
-{
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-
-  /** Initializes the peripherals clock
-  */
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInitStruct.PLL2.PLL2M = 4;
-  PeriphClkInitStruct.PLL2.PLL2N = 9;
-  PeriphClkInitStruct.PLL2.PLL2P = 2;
-  PeriphClkInitStruct.PLL2.PLL2Q = 2;
-  PeriphClkInitStruct.PLL2.PLL2R = 2;
-  PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_3;
-  PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOMEDIUM;
-  PeriphClkInitStruct.PLL2.PLL2FRACN = 3072;
-  PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL2;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-/**
   * @brief USB_OTG_FS Initialization Function
   * @param None
   * @retval None
@@ -290,13 +256,13 @@ void PeriphCommonClock_Config(void)
 static void MX_USB_OTG_FS_PCD_Init(void)
 {
 
-  /* USER CODE BEGIN USB_OTG_FS_Init 0 */
+  /* USER CODE BEGIN USB_OTG_FS_PCD_Init 0 */
 
-  /* USER CODE END USB_OTG_FS_Init 0 */
+  /* USER CODE END USB_OTG_FS_PCD_Init 0 */
 
-  /* USER CODE BEGIN USB_OTG_FS_Init 1 */
+  /* USER CODE BEGIN USB_OTG_FS_PCD_Init 1 */
 
-  /* USER CODE END USB_OTG_FS_Init 1 */
+  /* USER CODE END USB_OTG_FS_PCD_Init 1 */
   hpcd_USB_OTG_FS.Instance = USB_OTG_FS;
   hpcd_USB_OTG_FS.Init.dev_endpoints = 9;
   hpcd_USB_OTG_FS.Init.speed = PCD_SPEED_FULL;
@@ -312,9 +278,9 @@ static void MX_USB_OTG_FS_PCD_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USB_OTG_FS_Init 2 */
+  /* USER CODE BEGIN USB_OTG_FS_PCD_Init 2 */
 
-  /* USER CODE END USB_OTG_FS_Init 2 */
+  /* USER CODE END USB_OTG_FS_PCD_Init 2 */
 
 }
 

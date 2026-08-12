@@ -1,7 +1,8 @@
 #ifndef _M64282FP_H_
 #define _M64282FP_H_
 
-#include "stdint.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 #define M64282FP_REG_COUNT   8
 #define M64282FP_ADDR_WIDTH  3
@@ -61,6 +62,6 @@ extern m64282fp_registers_t m64282fp_default_registers;
 // Packs the initialization sequence configuring the provided registers into the ouput buffer.
 // The output buffer should be written to the GPIO BSRR register to configure the M64282FP.
 // It should be 91 words long.
-void m64282fp_pack_bsrr(m64282fp_registers_t *registers, uint32_t *output);
+void m64282fp_pack_bsrr(m64282fp_registers_t *registers, uint32_t *bsrr, bool skip_reconfigure);
 
 #endif

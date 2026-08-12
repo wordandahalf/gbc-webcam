@@ -1,7 +1,7 @@
 CompileFlags:
   Add:
-  - '-ferror-limit=0'
-  - '-Wno-implicit-int'
+  - -ferror-limit=0
+  - -Wno-implicit-int
   CompilationDatabase: CM7/build
 Diagnostics:
   Suppress:
@@ -16,8 +16,8 @@ If:
 
 CompileFlags:
   Add:
-  - '-ferror-limit=0'
-  - '-Wno-implicit-int'
+  - -ferror-limit=0
+  - -Wno-implicit-int
   CompilationDatabase: CM4/build
 Diagnostics:
   Suppress:

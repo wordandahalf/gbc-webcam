@@ -44,6 +44,7 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
+// XCK is set to PA15 (TIM2 GPIO out)
 #define PIN_GPIO_BANK GPIOE
 #define PIN_READ GPIO_PIN_8
 #define PIN_START GPIO_PIN_9

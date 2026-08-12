@@ -14,10 +14,10 @@ m64282fp_registers_t m64282fp_default_registers = {
 static void bsrr_reset(uint32_t *arr, uint16_t mask) { *arr |= mask << 16; }
 static void bsrr_set(uint32_t *arr, uint16_t mask) { *arr |= mask; }
 
-void m64282fp_pack_bsrr(m64282fp_registers_t *registers, uint32_t *bsrr) {
+void m64282fp_pack_bsrr(m64282fp_registers_t *registers, uint32_t *bsrr, bool skip_reconfigure) {
     uint8_t *input = (uint8_t*) registers;
 
-    // assemble the serial configuration bitstream
+    // assemble the serial configuration bitstream; specified values hard-code the register indices.
     uint32_t sin_bit_stream[3];
     sin_bit_stream[0] = 0x00040100 | (input[0] << 21) | (input[1] << 10) | (input[2] >> 1);
     sin_bit_stream[1] = 0x30080140 | ((input[2] & 0x7f) << 31) | (input[3] << 20) | (input[4] << 9)| (input[5] >> 2);
@@ -27,18 +27,20 @@ void m64282fp_pack_bsrr(m64282fp_registers_t *registers, uint32_t *bsrr) {
     bsrr_reset(bsrr++, PIN_RESET);
     bsrr_set(bsrr, PIN_RESET);
 
-    for (int i = 0; i < M64282FP_REG_COUNT * (M64282FP_ADDR_WIDTH + M64282FP_REG_WIDTH); i++) {
-        int bit = (sin_bit_stream[i / 32] >> (31 - (i % 32))) & 1;
+    if (!skip_reconfigure) {
+        for (int i = 0; i < M64282FP_REG_COUNT * M64282FP_FIELD_WIDTH; i++) {
+            int bit = (sin_bit_stream[i / 32] >> (31 - (i % 32))) & 1;
 
-        if (i % M64282FP_FIELD_WIDTH == 0) bsrr_reset(bsrr, PIN_LOAD);
-        else if (i % M64282FP_FIELD_WIDTH == M64282FP_FIELD_WIDTH - 1) bsrr_set(bsrr, PIN_LOAD);
+            if (i % M64282FP_FIELD_WIDTH == 0) bsrr_reset(bsrr, PIN_LOAD);
+            else if (i % M64282FP_FIELD_WIDTH == M64282FP_FIELD_WIDTH - 1) bsrr_set(bsrr, PIN_LOAD);
 
-        if (bit) bsrr_set(bsrr++, PIN_SIN);
-        else     bsrr_reset(bsrr++, PIN_SIN);
+            if (bit) bsrr_set(bsrr++, PIN_SIN);
+            else     bsrr_reset(bsrr++, PIN_SIN);
+        }
     }
 
-    bsrr_reset(bsrr, PIN_LOAD | PIN_SIN);
+    // need a clock of slack between last LOAD going high and START
+    bsrr_reset(bsrr++, PIN_LOAD | PIN_SIN);
     bsrr_set(bsrr++, PIN_START);
-
     bsrr_reset(bsrr, PIN_START);
 }

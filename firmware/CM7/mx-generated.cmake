@@ -5,8 +5,7 @@ set(MX_Defines_Syms
 	CORE_CM7 
 	USE_HAL_DRIVER 
 	STM32H755xx 
-	USE_PWR_DIRECT_SMPS_SUPPLY 
-	USE_NUCLEO_144
+	USE_PWR_DIRECT_SMPS_SUPPLY
     $<$<CONFIG:Debug>:DEBUG>
 )
 # STM32CubeMX generated include paths
@@ -70,6 +69,7 @@ set (MX_LINK_LIBS
     STM32_Drivers
     ${TOOLCHAIN_LINK_LIBRARIES}
     
+    
 )
 # Interface library for includes and symbols
 add_library(stm32cubemx INTERFACE)
@@ -93,6 +93,8 @@ target_link_libraries(${CMAKE_PROJECT_NAME} ${MX_LINK_LIBS})
 
 # Add the map file to the list of files to be removed with 'clean' target
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES ADDITIONAL_CLEAN_FILES ${CMAKE_PROJECT_NAME}.map)
+
+
 
 
 # Validate that STM32CubeMX code is compatible with C standard
