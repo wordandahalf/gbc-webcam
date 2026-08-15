@@ -4,8 +4,8 @@
 m64282fp_registers_t m64282fp_default_registers = {
     .output_reference = 40, .zero_point = CALIBRATION_POSITIVE,
     .output_gain = 4, .edge_operation = DIRECTION_NONE,
-    .override_kernel = 0, .exposure_high = 0,
-    .exposure_low = 0x3f, .pixel_coefficient = 1,
+    .override_kernel = 0, .exposure_high = 0x2,
+    .exposure_low = 0x0, .pixel_coefficient = 1,
     .neighbor_coefficient = 0, .unknown_coefficient = 1,
     .output_bias = 0, .invert_output = 0, .edge_process_ratio = RATIO_50,
     .edge_process_type = EDGE_PROCESS_ENHANCE

@@ -46,7 +46,7 @@ extern "C" {
 /* USER CODE BEGIN EC */
 // XCK is set to PA15 (TIM2 GPIO out)
 #define PIN_GPIO_BANK GPIOE
-#define PIN_READ GPIO_PIN_8
+#define PIN_READ_BLUE GPIO_PIN_8
 #define PIN_START GPIO_PIN_9
 #define PIN_LOAD GPIO_PIN_10
 #define PIN_RESET GPIO_PIN_11
@@ -62,6 +62,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
+void MX_DMA_Init(void);
 
 /* USER CODE BEGIN EFP */
 
